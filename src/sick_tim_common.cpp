@@ -85,6 +85,7 @@ SickTimCommon::SickTimCommon(AbstractParser* parser) :
     output_scan_diagnostic_->addToUpdater(updater_);
 
     generic_sopas_diagnostic_ = new marble::GenericDiagnostic("SOPAS");
+    generic_sopas_diagnostic_->addToUpdater(updater_);
   }
 
   ROS_ASSERT(updater_!= NULL);
