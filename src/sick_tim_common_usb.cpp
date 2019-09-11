@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2013, Osnabrück University
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Osnabrück University nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -44,12 +44,18 @@ namespace sick_tim
 SickTimCommonUsb::SickTimCommonUsb(AbstractParser* parser, int device_number) : SickTimCommon(parser),
     ctx_(NULL), numberOfDevices_(0), devices_(NULL), device_handle_(NULL), device_number_(device_number)
 {
+  if(config_.expected_fps>0)
+  {
+    generic_usb_diagnostic_ = new marble::GenericDiagnostic("LIBUSB");
+  }
 }
 
 SickTimCommonUsb::~SickTimCommonUsb()
 {
   stop_scanner();
   close_device();
+  delete generic_usb_diagnostic_;
+  generic_usb_diagnostic_ = nullptr;
 }
 
 int SickTimCommonUsb::close_device()
@@ -109,7 +115,7 @@ ssize_t SickTimCommonUsb::getSOPASDeviceList(libusb_context *ctx, uint16_t vendo
     if (result < 0)
     {
       ROS_ERROR("LIBUSB - Failed to get device descriptor");
-      diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Failed to get device descriptor.");
+      generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Failed to get device descriptor.");
       continue;
     }
 
@@ -122,7 +128,7 @@ ssize_t SickTimCommonUsb::getSOPASDeviceList(libusb_context *ctx, uint16_t vendo
       if (resultDevices == NULL)
       {
         ROS_ERROR("LIBUSB - Failed to allocate memory for the device result list.");
-        diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Failed to allocate memory for the device result list.");
+        generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Failed to allocate memory for the device result list.");
       }
       else
       {
@@ -237,7 +243,7 @@ void SickTimCommonUsb::printSOPASDeviceInformation(ssize_t numberOfDevices, libu
     if (result < 0)
     {
       ROS_ERROR("LIBUSB - Failed to get device descriptor");
-      diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Failed to get device descriptor.");
+      generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Failed to get device descriptor.");
       continue;
     }
     if (result == 0)
@@ -264,7 +270,7 @@ int SickTimCommonUsb::sendSOPASCommand(const char* request, std::vector<unsigned
 {
   if (device_handle_ == NULL) {
     ROS_ERROR("LIBUSB - device not open");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - device not open.");
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - device not open.");
     return ExitError;
   }
 
@@ -283,7 +289,7 @@ int SickTimCommonUsb::sendSOPASCommand(const char* request, std::vector<unsigned
   if (result != 0 || actual_length != requestLength)
   {
     ROS_ERROR("LIBUSB - Write Error: %i.", result);
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Write Error.");
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Write Error.");
     return result;
   }
 
@@ -294,7 +300,7 @@ int SickTimCommonUsb::sendSOPASCommand(const char* request, std::vector<unsigned
   if (result != 0)
   {
     ROS_ERROR("LIBUSB - Read Error: %i.", result);
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Read Error.");
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Read Error.");
     return result;
   }
 
@@ -322,7 +328,7 @@ int SickTimCommonUsb::init_device()
   if (result != 0)
   {
     ROS_ERROR("LIBUSB - Initialization failed with the following error code: %i.", result);
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Initialization failed.");
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Initialization failed.");
     return ExitError;
   }
 
@@ -347,13 +353,13 @@ int SickTimCommonUsb::init_device()
   if (numberOfDevices_ == 0)
   {
     ROS_ERROR("No SICK TiM devices connected!");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "No SICK TiM devices connected!");
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "No SICK TiM devices connected!");
     return ExitError;
   }
   else if (numberOfDevices_ <= device_number_)
   {
     ROS_ERROR("Device number %d too high, only %zu SICK TiM scanners connected", device_number_, numberOfDevices_);
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "Chosen SICK TiM scanner not connected");
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "Chosen SICK TiM scanner not connected");
 	return ExitError;
   }
 
@@ -369,7 +375,7 @@ int SickTimCommonUsb::init_device()
   if (device_handle_ == NULL)
   {
     ROS_ERROR("LIBUSB - Cannot open device; please read sick_tim/udev/README");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Cannot open device; please read sick_tim/udev/README.");
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Cannot open device; please read sick_tim/udev/README.");
     return ExitError;
   }
   else
@@ -393,7 +399,7 @@ int SickTimCommonUsb::init_device()
   if (result < 0)
   {
     ROS_ERROR("LIBUSB - Cannot claim interface");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Cannot claim interface.");
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Cannot claim interface.");
     return ExitError;
   }
   else
@@ -413,14 +419,14 @@ int SickTimCommonUsb::get_datagram(unsigned char* receiveBuffer, int bufferSize,
     if (result == LIBUSB_ERROR_TIMEOUT)
     {
       ROS_WARN("LIBUSB - Read Error: LIBUSB_ERROR_TIMEOUT.");
-      diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Read Error: LIBUSB_ERROR_TIMEOUT.");
+      generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Read Error: LIBUSB_ERROR_TIMEOUT.");
       *actual_length = 0;
       return ExitSuccess; // return success with size 0 to continue looping
     }
     else
     {
       ROS_ERROR("LIBUSB - Read Error: %i.", result);
-      diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "LIBUSB - Read Error.");
+      generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "LIBUSB - Read Error.");
       return result; // return failure to exit node
     }
   }

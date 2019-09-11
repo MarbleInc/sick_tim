@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2013, Freiburg University
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Osnabrück University nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -56,12 +56,19 @@ SickTimCommonTcp::SickTimCommonTcp(const std::string &hostname, const std::strin
     // http://www.boost.org/doc/libs/1_46_0/doc/html/boost_asio/example/timeouts/blocking_tcp_client.cpp
     deadline_.expires_at(boost::posix_time::pos_infin);
     checkDeadline();
+
+    if(config_.expected_fps>0)
+    {
+      generic_tcp_diagnostic_ = new marble::GenericDiagnostic("TCP");
+    }
 }
 
 SickTimCommonTcp::~SickTimCommonTcp()
 {
   stop_scanner();
   close_device();
+  delete generic_tcp_diagnostic_;
+  generic_tcp_diagnostic_ = nullptr;
 }
 
 using boost::asio::ip::tcp;
@@ -81,7 +88,7 @@ int SickTimCommonTcp::init_device()
     catch (boost::system::system_error &e)
     {
         ROS_FATAL("Could not resolve host: ... (%d)(%s)", e.code().value(), e.code().message().c_str());
-        diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "Could not resolve host.");
+        generic_tcp_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "Could not resolve host.");
         return ExitError;
     }
 
@@ -117,7 +124,7 @@ int SickTimCommonTcp::init_device()
     if (!success)
     {
         ROS_FATAL("Could not connect to host %s:%s", hostname_.c_str(), port_.c_str());
-        diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "Could not connect to host.");
+        generic_tcp_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "Could not connect to host.");
         return ExitError;
     }
 
@@ -166,7 +173,7 @@ int SickTimCommonTcp::readWithTimeout(size_t timeout_ms, char *buffer, int buffe
 
     // Read until 0x03 ending indicator
     boost::asio::async_read_until(
-        socket_, 
+        socket_,
         input_buffer_,
         end_delim,
         boost::bind(
@@ -185,7 +192,7 @@ int SickTimCommonTcp::readWithTimeout(size_t timeout_ms, char *buffer, int buffe
         if (ec_ != boost::asio::error::would_block)
         {
             ROS_ERROR("sendSOPASCommand: failed attempt to read from socket: %d: %s", ec_.value(), ec_.message().c_str());
-            diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "sendSOPASCommand: exception during read_until().");
+            generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "sendSOPASCommand: exception during read_until().");
             if (exception_occured != 0)
                 *exception_occured = true;
         }
@@ -193,7 +200,7 @@ int SickTimCommonTcp::readWithTimeout(size_t timeout_ms, char *buffer, int buffe
         // For would_block, just return and indicate nothing bad happend
         return ExitError;
     }
-    
+
     // Avoid a buffer overflow by limiting the data we read
     size_t to_read = bytes_transfered_ > buffer_size - 1 ? buffer_size - 1 : bytes_transfered_;
     size_t i = 0;
@@ -213,7 +220,7 @@ int SickTimCommonTcp::readWithTimeout(size_t timeout_ms, char *buffer, int buffe
     else
         // No buffer was provided, just drop the data
         input_buffer_.consume(bytes_transfered_);
-    
+
     // Set the return variable to the size of the read message
     if (bytes_read != 0)
         *bytes_read = to_read;
@@ -228,7 +235,7 @@ int SickTimCommonTcp::sendSOPASCommand(const char* request, std::vector<unsigned
 {
     if (!socket_.is_open()) {
         ROS_ERROR("sendSOPASCommand: socket not open");
-        diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "sendSOPASCommand: socket not open.");
+        generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "sendSOPASCommand: socket not open.");
         return ExitError;
     }
 
@@ -242,7 +249,7 @@ int SickTimCommonTcp::sendSOPASCommand(const char* request, std::vector<unsigned
     catch (boost::system::system_error &e)
     {
         ROS_ERROR("write error for command: %s", request);
-        diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "Write error for sendSOPASCommand.");
+        generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "Write error for sendSOPASCommand.");
         return ExitError;
     }
 
@@ -253,7 +260,7 @@ int SickTimCommonTcp::sendSOPASCommand(const char* request, std::vector<unsigned
     if (readWithTimeout(1000, buffer, BUF_SIZE, &bytes_read, 0) == ExitError)
     {
         ROS_ERROR_THROTTLE(1.0, "sendSOPASCommand: no full reply available for read after 1s");
-        diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "sendSOPASCommand: no full reply available for read after 5 s.");
+        generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "sendSOPASCommand: no full reply available for read after 5 s.");
         return ExitError;
     }
 
@@ -270,7 +277,7 @@ int SickTimCommonTcp::get_datagram(unsigned char* receiveBuffer, int bufferSize,
 {
     if (!socket_.is_open()) {
         ROS_ERROR("get_datagram: socket not open");
-        diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "get_datagram: socket not open.");
+        generic_tcp_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "get_datagram: socket not open.");
         return ExitError;
     }
 
@@ -288,7 +295,7 @@ int SickTimCommonTcp::get_datagram(unsigned char* receiveBuffer, int bufferSize,
     if (readWithTimeout(timeout, buffer, bufferSize, actual_length, &exception_occured) != ExitSuccess)
     {
         ROS_ERROR_THROTTLE(1.0, "get_datagram: no data available for read after %zu ms", timeout);
-        diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "get_datagram: no data available for read after timeout.");
+        generic_tcp_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "get_datagram: no data available for read after timeout.");
 
         // Attempt to reconnect when the connection was terminated
         if (!socket_.is_open())
