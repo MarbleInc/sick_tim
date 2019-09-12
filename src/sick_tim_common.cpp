@@ -70,24 +70,20 @@ SickTimCommon::SickTimCommon(AbstractParser* parser) :
 
   namespace_ = getNamespaceStr();
 
-  if(config_.expected_fps>0)
-  {
-    updater_ = new marble::DiagnosticUpdater(namespace_+"/"+"scan", nh_);
-    marble::diagnostics::FrequencyParams warning_freq_params;
-    warning_freq_params.min_frequency = config_.expected_fps - config_.fps_tolerance;
-    warning_freq_params.max_frequency = config_.expected_fps + config_.fps_tolerance;
+  updater_ = new marble::DiagnosticUpdater(namespace_+"/"+"scan", nh_);
+  marble::diagnostics::FrequencyParams warning_freq_params;
+  warning_freq_params.min_frequency = config_.expected_fps - config_.fps_tolerance;
+  warning_freq_params.max_frequency = config_.expected_fps + config_.fps_tolerance;
 
-    marble::OutputDiagnosticParams output_scan_params;
-    output_scan_params.freq_warning_thresholds = warning_freq_params;
-    output_scan_params.time_window_sec = 10.0;
+  marble::OutputDiagnosticParams output_scan_params;
+  output_scan_params.freq_warning_thresholds = warning_freq_params;
+  output_scan_params.time_window_sec = 10.0;
 
-    output_scan_diagnostic_ = new marble::OutputDiagnostic(namespace_+"/"+"scan", nh_, output_scan_params);
-    output_scan_diagnostic_->addToUpdater(updater_);
+  output_scan_diagnostic_ = new marble::OutputDiagnostic(namespace_+"/"+"scan", nh_, output_scan_params);
+  output_scan_diagnostic_->addToUpdater(updater_);
 
-    generic_sopas_diagnostic_ = new marble::GenericDiagnostic("SOPAS");
-    generic_sopas_diagnostic_->addToUpdater(updater_);
-    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::OK, "SOPAS diagnostic initialized");
-  }
+  generic_sopas_diagnostic_ = new marble::GenericDiagnostic("SOPAS");
+  generic_sopas_diagnostic_->addToUpdater(updater_);
 
   ROS_ASSERT(updater_!= NULL);
   ROS_ASSERT(output_scan_diagnostic_!= NULL);
@@ -279,6 +275,8 @@ int SickTimCommon::init_scanner()
     return ExitError;
   }
 
+  generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::OK, "SOPAS diagnostic initialized");
+
   return ExitSuccess;
 }
 
@@ -361,6 +359,7 @@ int SickTimCommon::loopOnce()
   }
 
   output_scan_diagnostic_->tick();
+  generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::OK, "SICK data published");
 
   return ExitSuccess; // return success to continue looping
 }

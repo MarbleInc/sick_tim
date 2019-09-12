@@ -60,7 +60,7 @@ class SickMrs1000Communication : public SickTimCommonTcp
   ros::Publisher cloud_pub_;
   marble::DiagnosticUpdater* updater_mrs_1000_;
   marble::OutputDiagnostic* output_cloud_diagnostic_;
-  marble::GenericDiagnostic* generic_datagram_diagnostic_;
+  marble::GenericDiagnostic* generic_mrs_1000_diagnostic_;
   virtual int init_scanner();
   ScanAndCloudParser *scan_and_cloud_parser_;
 };

@@ -44,12 +44,8 @@ namespace sick_tim
 SickTimCommonUsb::SickTimCommonUsb(AbstractParser* parser, int device_number) : SickTimCommon(parser),
     ctx_(NULL), numberOfDevices_(0), devices_(NULL), device_handle_(NULL), device_number_(device_number)
 {
-  if(config_.expected_fps>0)
-  {
-    generic_usb_diagnostic_ = new marble::GenericDiagnostic("LIBUSB");
-    generic_usb_diagnostic_->addToUpdater(updater_);
-    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::OK, "LIBUSB diagnostic initialized");
-  }
+  generic_usb_diagnostic_ = new marble::GenericDiagnostic("LIBUSB");
+  generic_usb_diagnostic_->addToUpdater(updater_);
 }
 
 SickTimCommonUsb::~SickTimCommonUsb()
@@ -409,6 +405,8 @@ int SickTimCommonUsb::init_device()
     ROS_INFO("LIBUSB - Claimed interface");
   }
 
+  generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::OK, "LIBUSB diagnostic initialized");
+
   return ExitSuccess;
 }
 
@@ -432,7 +430,6 @@ int SickTimCommonUsb::get_datagram(unsigned char* receiveBuffer, int bufferSize,
       return result; // return failure to exit node
     }
   }
-
   receiveBuffer[*actual_length] = 0;
   return ExitSuccess;
 }

@@ -57,12 +57,8 @@ SickTimCommonTcp::SickTimCommonTcp(const std::string &hostname, const std::strin
     deadline_.expires_at(boost::posix_time::pos_infin);
     checkDeadline();
 
-    if(config_.expected_fps>0)
-    {
-      generic_tcp_diagnostic_ = new marble::GenericDiagnostic("TCP");
-      generic_tcp_diagnostic_->addToUpdater(updater_);
-      generic_tcp_diagnostic_->setStatus(marble::diagnostics::Status::OK, "TCP diagnostic initialized");
-    }
+    generic_tcp_diagnostic_ = new marble::GenericDiagnostic("TCP");
+    generic_tcp_diagnostic_->addToUpdater(updater_);
 }
 
 SickTimCommonTcp::~SickTimCommonTcp()
@@ -132,6 +128,7 @@ int SickTimCommonTcp::init_device()
 
     input_buffer_.consume(input_buffer_.size());
 
+    generic_tcp_diagnostic_->setStatus(marble::diagnostics::Status::OK, "TCP device initialized");
     return ExitSuccess;
 }
 
