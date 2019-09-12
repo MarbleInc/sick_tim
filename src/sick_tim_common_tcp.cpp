@@ -60,7 +60,6 @@ SickTimCommonTcp::SickTimCommonTcp(const std::string &hostname, const std::strin
     if(config_.expected_fps>0)
     {
       generic_tcp_diagnostic_ = new marble::GenericDiagnostic("TCP");
-      generic_tcp_diagnostic_->addToUpdater(updater_);
     }
 }
 
