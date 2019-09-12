@@ -70,7 +70,7 @@ SickTimCommon::SickTimCommon(AbstractParser* parser) :
 
   namespace_ = getNamespaceStr();
 
-  updater_ = new marble::DiagnosticUpdater(namespace_+"/"+"scan", nh_);
+  updater_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"scan", nh_);
   marble::diagnostics::FrequencyParams warning_freq_params;
   warning_freq_params.min_frequency = config_.expected_fps - config_.fps_tolerance;
   warning_freq_params.max_frequency = config_.expected_fps + config_.fps_tolerance;
@@ -79,7 +79,7 @@ SickTimCommon::SickTimCommon(AbstractParser* parser) :
   output_scan_params.freq_warning_thresholds = warning_freq_params;
   output_scan_params.time_window_sec = 10.0;
 
-  output_scan_diagnostic_ = new marble::OutputDiagnostic(namespace_+"/"+"scan", nh_, output_scan_params);
+  output_scan_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"scan", nh_, output_scan_params);
   output_scan_diagnostic_->addToUpdater(updater_);
 
   generic_sopas_diagnostic_ = new marble::GenericDiagnostic("SOPAS");
