@@ -59,6 +59,8 @@ SickMrs1000Communication::SickMrs1000Communication(const std::string &hostname,
     output_cloud_diagnostic_->addToUpdater(updater_mrs_1000_);
 
     generic_datagram_diagnostic_ = new marble::GenericDiagnostic("datagram");
+    generic_datagram_diagnostic_->addToUpdater(updater_);
+    generic_datagram_diagnostic_->setStatus(marble::diagnostics::Status::OK, "Datagram diagnostic initialized");
   }
   ROS_ASSERT(updater_mrs_1000_!= NULL);
   ROS_ASSERT(output_cloud_diagnostic_!= NULL);

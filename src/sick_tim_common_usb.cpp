@@ -47,6 +47,8 @@ SickTimCommonUsb::SickTimCommonUsb(AbstractParser* parser, int device_number) : 
   if(config_.expected_fps>0)
   {
     generic_usb_diagnostic_ = new marble::GenericDiagnostic("LIBUSB");
+    generic_usb_diagnostic_->addToUpdater(updater_);
+    generic_usb_diagnostic_->setStatus(marble::diagnostics::Status::OK, "LIBUSB diagnostic initialized");
   }
 }
 
