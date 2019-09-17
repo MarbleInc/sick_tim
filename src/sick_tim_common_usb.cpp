@@ -41,7 +41,8 @@
 namespace sick_tim
 {
 
-SickTimCommonUsb::SickTimCommonUsb(AbstractParser* parser, int device_number) : SickTimCommon(parser),
+SickTimCommonUsb::SickTimCommonUsb(AbstractParser* parser, int device_number,
+  double expected_fps, double fps_tolerance) : SickTimCommon(parser, expected_fps, fps_tolerance),
     ctx_(NULL), numberOfDevices_(0), devices_(NULL), device_handle_(NULL), device_number_(device_number)
 {
   generic_usb_diagnostic_ = new marble::GenericDiagnostic("LIBUSB");

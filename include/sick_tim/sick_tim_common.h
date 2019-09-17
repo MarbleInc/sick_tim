@@ -66,7 +66,7 @@ namespace sick_tim
 class SickTimCommon
 {
 public:
-  SickTimCommon(AbstractParser* parser);
+  SickTimCommon(AbstractParser* parser, double expected_fps=15, double fps_tolerance=1.5);
   virtual ~SickTimCommon();
   virtual int init();
   virtual int loopOnce();
@@ -120,6 +120,10 @@ protected:
   bool publish_datagram_;
   ros::Publisher datagram_pub_;
   ros::Publisher pub_;
+
+  // Diagnostic params
+  double expected_fps_;
+  double fps_tolerance_;
 
   std::string namespace_;
 

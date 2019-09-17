@@ -60,6 +60,10 @@ int main(int argc, char **argv)
   nhPriv.param("subscribe_datagram", subscribe_datagram, false);
   nhPriv.param("device_number", device_number, 0);
 
+  double expected_fps, fps_tolerance;
+  nhPriv.param("expected_fps", expected_fps, 15.0);
+  nhPriv.param("fps_tolerance", fps_tolerance, 1.5);
+
   sick_tim::SickTim5512050001Parser* parser = new sick_tim::SickTim5512050001Parser();
 
   double param;
@@ -83,11 +87,13 @@ int main(int argc, char **argv)
   {
     // Atempt to connect/reconnect
     if (subscribe_datagram)
-      s = new sick_tim::SickTimCommonMockup(parser);
+      s = new sick_tim::SickTimCommonMockup(parser, expected_fps, fps_tolerance);
     else if (useTCP)
-      s = new sick_tim::SickTimCommonTcp(hostname, port, timelimit, parser);
+      s = new sick_tim::SickTimCommonTcp(hostname, port, timelimit, parser, expected_fps,
+        fps_tolerance);
     else
-      s = new sick_tim::SickTimCommonUsb(parser, device_number);
+      s = new sick_tim::SickTimCommonUsb(parser, device_number, expected_fps,
+        fps_tolerance);
     result = s->init();
 
     while(ros::ok() && (result == sick_tim::ExitSuccess)){

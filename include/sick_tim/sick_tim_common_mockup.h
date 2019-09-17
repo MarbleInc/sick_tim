@@ -51,7 +51,7 @@ namespace sick_tim
 class SickTimCommonMockup : public SickTimCommon
 {
 public:
-  SickTimCommonMockup(AbstractParser* parser);
+  SickTimCommonMockup(AbstractParser* parser, double expected_fps=15, double fps_tolerance=1.5);
   virtual ~SickTimCommonMockup();
 
 protected:

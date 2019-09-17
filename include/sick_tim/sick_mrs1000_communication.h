@@ -51,7 +51,9 @@ class SickMrs1000Communication : public SickTimCommonTcp
   SickMrs1000Communication(const std::string &hostname,
                            const std::string &port,
                            int &timelimit,
-                           ScanAndCloudParser *parser);
+                           ScanAndCloudParser *parser,
+                           double expected_fps=12.5,
+                           double fps_tolerance=1.2);
   virtual ~SickMrs1000Communication();
   virtual int loopOnce();
 

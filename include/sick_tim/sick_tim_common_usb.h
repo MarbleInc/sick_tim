@@ -52,7 +52,7 @@ namespace sick_tim
 class SickTimCommonUsb : public SickTimCommon
 {
 public:
-  SickTimCommonUsb(AbstractParser* parser, int device_number);
+  SickTimCommonUsb(AbstractParser* parser, int device_number, double expected_fps=15, double fps_tolerance=1.5);
   virtual ~SickTimCommonUsb();
 
 protected:

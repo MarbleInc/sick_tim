@@ -39,16 +39,18 @@ namespace sick_tim
 SickMrs1000Communication::SickMrs1000Communication(const std::string &hostname,
                                                    const std::string &port,
                                                    int &timelimit,
-                                                   ScanAndCloudParser* parser)
-: SickTimCommonTcp(hostname, port, timelimit, parser),
+                                                   ScanAndCloudParser* parser,
+                                                   double expected_fps,
+                                                   double fps_tolerance)
+: SickTimCommonTcp(hostname, port, timelimit, parser, expected_fps, fps_tolerance),
   scan_and_cloud_parser_(parser),
   cloud_pub_(nh_.advertise<sensor_msgs::PointCloud2>("cloud", 300))
 {
 
   updater_mrs_1000_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"cloud", nh_);
   marble::diagnostics::FrequencyParams warning_freq_params;
-  warning_freq_params.min_frequency = config_.expected_fps - config_.fps_tolerance;
-  warning_freq_params.max_frequency = config_.expected_fps + config_.fps_tolerance;
+  warning_freq_params.min_frequency = expected_fps_ - fps_tolerance_;
+  warning_freq_params.max_frequency = expected_fps_ + fps_tolerance_;
 
   marble::OutputDiagnosticParams output_cloud_params;
   output_cloud_params.freq_warning_thresholds = warning_freq_params;
@@ -129,7 +131,7 @@ int SickMrs1000Communication::loopOnce()
         ROS_DEBUG_STREAM("Publish cloud with " << cloud.height * cloud.width
           << " points in the frame \"" << cloud.header.frame_id << "\".");
         cloud_pub_.publish(cloud);
-
+        output_cloud_diagnostic_->tick();
       }
 
 
@@ -141,13 +143,11 @@ int SickMrs1000Communication::loopOnce()
       if(scan.header.frame_id != "")
       {
         pub_.publish(scan);
+        output_scan_diagnostic_->tick();
       }
     }
     buffer_pos = dend + 1;
   }
-
-  output_cloud_diagnostic_->tick();
-  output_scan_diagnostic_->tick();
 
   generic_mrs_1000_diagnostic_->setStatus(marble::diagnostics::Status::OK, "Cloud and scan published");
 

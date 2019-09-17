@@ -38,7 +38,8 @@
 namespace sick_tim
 {
 
-SickTimCommonMockup::SickTimCommonMockup(AbstractParser* parser) : SickTimCommon(parser)
+SickTimCommonMockup::SickTimCommonMockup(AbstractParser* parser,double expected_fps,
+  double fps_tolerance) : SickTimCommon(parser,expected_fps,fps_tolerance)
 {
   sub_ = nh_.subscribe("datagram", 1, &SickTimCommonMockup::datagramCB, this);
 }
