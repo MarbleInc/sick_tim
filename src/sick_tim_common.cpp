@@ -51,10 +51,9 @@ std::string SickTimCommon::getNamespaceStr()
     return ns;
 }
 
-SickTimCommon::SickTimCommon(AbstractParser* parser, double expected_fps,
-  double fps_tolerance):
+SickTimCommon::SickTimCommon(AbstractParser* parser, marble::OutputDiagnosticParams output_scan_params):
     output_scan_diagnostic_(nullptr), generic_sopas_diagnostic_(nullptr), updater_(nullptr),
-    parser_(parser), expected_fps_(expected_fps), fps_tolerance_(fps_tolerance)
+    parser_(parser), output_scan_params_(output_scan_params)
 {
   dynamic_reconfigure::Server<sick_tim::SickTimConfig>::CallbackType f;
   f = boost::bind(&sick_tim::SickTimCommon::update_config, this, _1, _2);
@@ -72,15 +71,8 @@ SickTimCommon::SickTimCommon(AbstractParser* parser, double expected_fps,
   namespace_ = getNamespaceStr();
 
   updater_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"scan", nh_);
-  marble::diagnostics::FrequencyParams warning_freq_params;
-  warning_freq_params.min_frequency = expected_fps_ - fps_tolerance_;
-  warning_freq_params.max_frequency = expected_fps_ + fps_tolerance_;
 
-  marble::OutputDiagnosticParams output_scan_params;
-  output_scan_params.freq_warning_thresholds = warning_freq_params;
-  output_scan_params.time_window_sec = 10.0;
-
-  output_scan_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"scan", nh_, output_scan_params);
+  output_scan_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"scan", nh_, output_scan_params_);
   output_scan_diagnostic_->addToUpdater(updater_);
 
   generic_sopas_diagnostic_ = new marble::GenericDiagnostic("SOPAS");

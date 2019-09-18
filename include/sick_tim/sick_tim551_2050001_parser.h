@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2013, Osnabrück University
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Osnabrück University nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -36,9 +36,49 @@
 #define SICK_TIM551_2050001_PARSER_H_
 
 #include "abstract_parser.h"
+#include <parameters/parameter_declaration.h>
+#include <mbot_diagnostics/output_diagnostic.h>
 
 namespace sick_tim
 {
+struct SickTim5512050001Parameters {
+  SickTim5512050001Parameters() {
+    MBOT_PARAMETER_REQUIRED(SickTim5512050001Parameters, publish_dependency);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, useTCP);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, subscribe_datagram);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, device_number);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, hostname);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, timelimit);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, port);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, range_max);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, range_min);
+    MBOT_PARAMETER_OPTIONAL(SickTim5512050001Parameters, time_increment);
+  }
+
+  // Output diagnostic params for the sick scan
+  marble::OutputDiagnosticParams publish_dependency;
+
+  // Use TCP flag (Needs to be true when hostname set)
+  bool useTCP = false;
+
+  // Subscribe datagram flag
+  bool subscribe_datagram = false;
+
+  // Device numbers
+  int device_number = 0;
+
+  // Host name and port
+  std::string hostname = "hostname";
+  std::string port = "2112";
+
+  // Time limit
+  int timelimit = 5;
+
+  //Ranges
+  double range_max = 0.0;
+  double range_min = 0.0;
+  double time_increment = 0.0;
+};
 
 class SickTim5512050001Parser : public AbstractParser
 {

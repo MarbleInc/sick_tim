@@ -3,6 +3,7 @@ project(sick_tim)
 
 find_package(catkin REQUIRED
     COMPONENTS
+      mbot_parameters
       mbot_diagnostics
       dynamic_reconfigure
       roscpp

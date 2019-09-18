@@ -52,7 +52,8 @@ namespace sick_tim
 class SickTimCommonUsb : public SickTimCommon
 {
 public:
-  SickTimCommonUsb(AbstractParser* parser, int device_number, double expected_fps=15, double fps_tolerance=1.5);
+  SickTimCommonUsb(AbstractParser* parser, int device_number,
+    marble::OutputDiagnosticParams output_scan_params = marble::OutputDiagnosticParams());
   virtual ~SickTimCommonUsb();
 
 protected:

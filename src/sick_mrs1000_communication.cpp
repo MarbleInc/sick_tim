@@ -40,27 +40,21 @@ SickMrs1000Communication::SickMrs1000Communication(const std::string &hostname,
                                                    const std::string &port,
                                                    int &timelimit,
                                                    ScanAndCloudParser* parser,
-                                                   double expected_fps,
-                                                   double fps_tolerance)
-: SickTimCommonTcp(hostname, port, timelimit, parser, expected_fps, fps_tolerance),
+                                                   marble::OutputDiagnosticParams
+                                                   output_scan_params)
+: SickTimCommonTcp(hostname, port, timelimit, parser, output_scan_params),
   scan_and_cloud_parser_(parser),
   cloud_pub_(nh_.advertise<sensor_msgs::PointCloud2>("cloud", 300))
 {
 
   updater_mrs_1000_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"cloud", nh_);
-  marble::diagnostics::FrequencyParams warning_freq_params;
-  warning_freq_params.min_frequency = expected_fps_ - fps_tolerance_;
-  warning_freq_params.max_frequency = expected_fps_ + fps_tolerance_;
 
-  marble::OutputDiagnosticParams output_cloud_params;
-  output_cloud_params.freq_warning_thresholds = warning_freq_params;
-  output_cloud_params.time_window_sec = 10.0;
-
-  output_cloud_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"cloud", nh_, output_cloud_params);
+  output_cloud_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"cloud", nh_, output_scan_params);
   output_cloud_diagnostic_->addToUpdater(updater_mrs_1000_);
 
   generic_mrs_1000_diagnostic_ = new marble::GenericDiagnostic("datagram");
   generic_mrs_1000_diagnostic_->addToUpdater(updater_);
+  generic_mrs_1000_diagnostic_->addToUpdater(updater_mrs_1000_);
 
   ROS_ASSERT(updater_mrs_1000_!= NULL);
   ROS_ASSERT(output_cloud_diagnostic_!= NULL);

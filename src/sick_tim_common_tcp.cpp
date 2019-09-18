@@ -43,9 +43,9 @@ namespace sick_tim
 {
 
 SickTimCommonTcp::SickTimCommonTcp(const std::string &hostname, const std::string &port, int &timelimit, AbstractParser* parser,
-  double expected_fps, double fps_tolerance)
+  marble::OutputDiagnosticParams output_scan_params)
 :
-    SickTimCommon(parser, expected_fps, fps_tolerance),
+    SickTimCommon(parser, output_scan_params),
     socket_(io_service_),
     deadline_(io_service_),
     hostname_(hostname),

@@ -52,8 +52,8 @@ class SickMrs1000Communication : public SickTimCommonTcp
                            const std::string &port,
                            int &timelimit,
                            ScanAndCloudParser *parser,
-                           double expected_fps=12.5,
-                           double fps_tolerance=1.2);
+                           marble::OutputDiagnosticParams output_scan_params =
+                           marble::OutputDiagnosticParams());
   virtual ~SickMrs1000Communication();
   virtual int loopOnce();
 

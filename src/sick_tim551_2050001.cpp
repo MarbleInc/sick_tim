@@ -37,47 +37,28 @@
 #include <sick_tim/sick_tim_common_tcp.h>
 #include <sick_tim/sick_tim_common_mockup.h>
 #include <sick_tim/sick_tim551_2050001_parser.h>
+#include <mbot_parameters/parameter_source_ros.h>
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "sick_tim551_2050001");
-  ros::NodeHandle nhPriv("~");
-
-  // check for TCP - use if ~hostname is set.
-  bool useTCP = false;
-  std::string hostname;
-  if(nhPriv.getParam("hostname", hostname)) {
-      useTCP = true;
-  }
-  std::string port;
-  nhPriv.param<std::string>("port", port, "2112");
-
-  int timelimit;
-  nhPriv.param("timelimit", timelimit, 5);
-
-  bool subscribe_datagram;
-  int device_number;
-  nhPriv.param("subscribe_datagram", subscribe_datagram, false);
-  nhPriv.param("device_number", device_number, 0);
-
-  double expected_fps, fps_tolerance;
-  nhPriv.param("expected_fps", expected_fps, 15.0);
-  nhPriv.param("fps_tolerance", fps_tolerance, 1.5);
+  sick_tim::SickTim5512050001Parameters params;
+  ros::NodeHandle nh("~");
+  marble::parameters::load(std::make_shared<marble::parameters::ParameterSourceRos>(nh),&params);
 
   sick_tim::SickTim5512050001Parser* parser = new sick_tim::SickTim5512050001Parser();
 
-  double param;
-  if (nhPriv.getParam("range_min", param))
+  if (params.range_min>0)
   {
-    parser->set_range_min(param);
+    parser->set_range_min(params.range_min);
   }
-  if (nhPriv.getParam("range_max", param))
+  if (params.range_max>0)
   {
-    parser->set_range_max(param);
+    parser->set_range_max(params.range_max);
   }
-  if (nhPriv.getParam("time_increment", param))
+  if (params.time_increment>0)
   {
-    parser->set_time_increment(param);
+    parser->set_time_increment(params.time_increment);
   }
 
   sick_tim::SickTimCommon* s = NULL;
@@ -86,14 +67,14 @@ int main(int argc, char **argv)
   while (ros::ok())
   {
     // Atempt to connect/reconnect
-    if (subscribe_datagram)
-      s = new sick_tim::SickTimCommonMockup(parser, expected_fps, fps_tolerance);
-    else if (useTCP)
-      s = new sick_tim::SickTimCommonTcp(hostname, port, timelimit, parser, expected_fps,
-        fps_tolerance);
+    if (params.subscribe_datagram)
+      s = new sick_tim::SickTimCommonMockup(parser, params.publish_dependency);
+    else if (params.useTCP)
+      s = new sick_tim::SickTimCommonTcp(params.hostname, params.port,
+        params.timelimit, parser, params.publish_dependency);
     else
-      s = new sick_tim::SickTimCommonUsb(parser, device_number, expected_fps,
-        fps_tolerance);
+      s = new sick_tim::SickTimCommonUsb(parser, params.device_number,
+        params.publish_dependency);
     result = s->init();
 
     while(ros::ok() && (result == sick_tim::ExitSuccess)){
@@ -106,7 +87,7 @@ int main(int argc, char **argv)
     if (result == sick_tim::ExitFatal)
       return result;
 
-    if (ros::ok() && !subscribe_datagram && !useTCP)
+    if (ros::ok() && !params.subscribe_datagram && !params.useTCP)
       ros::Duration(1.0).sleep(); // Only attempt USB connections once per second
   }
 

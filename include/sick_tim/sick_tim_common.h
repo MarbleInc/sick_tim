@@ -66,7 +66,7 @@ namespace sick_tim
 class SickTimCommon
 {
 public:
-  SickTimCommon(AbstractParser* parser, double expected_fps=15, double fps_tolerance=1.5);
+  SickTimCommon(AbstractParser* parser, marble::OutputDiagnosticParams output_scan_params = marble::OutputDiagnosticParams());
   virtual ~SickTimCommon();
   virtual int init();
   virtual int loopOnce();
@@ -122,8 +122,7 @@ protected:
   ros::Publisher pub_;
 
   // Diagnostic params
-  double expected_fps_;
-  double fps_tolerance_;
+  marble::OutputDiagnosticParams output_scan_params_;
 
   std::string namespace_;
 
