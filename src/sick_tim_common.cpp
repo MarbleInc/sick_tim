@@ -186,6 +186,7 @@ int SickTimCommon::init_scanner()
   {
     ROS_ERROR("SOPAS - Error reading variable 'DeviceIdent'.");
     generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error reading variable 'DeviceIdent'.");
+    return ExitError;
   }
 
   /*
@@ -198,6 +199,7 @@ int SickTimCommon::init_scanner()
   {
     ROS_ERROR("SOPAS - Error reading variable 'SerialNumber'.");
     generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error reading variable 'SerialNumber'.");
+    return ExitError;
   }
 
   // set hardware ID based on DeviceIdent and SerialNumber
@@ -216,6 +218,7 @@ int SickTimCommon::init_scanner()
   {
     ROS_ERROR("SOPAS - Error reading variable 'FirmwareVersion'.");
     generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error reading variable 'FirmwareVersion'.");
+    return ExitError;
   }
 
   /*
@@ -228,6 +231,7 @@ int SickTimCommon::init_scanner()
   {
     ROS_ERROR("SOPAS - Error reading variable 'devicestate'.");
     generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error reading variable 'devicestate'.");
+    return ExitError;
   }
   std::string deviceStateReplyStr = replyToString(deviceStateReply);
 
