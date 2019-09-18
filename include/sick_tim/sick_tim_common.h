@@ -121,9 +121,6 @@ protected:
   ros::Publisher datagram_pub_;
   ros::Publisher pub_;
 
-  // Diagnostic params
-  marble::OutputDiagnosticParams output_scan_params_;
-
   std::string namespace_;
 
 private:

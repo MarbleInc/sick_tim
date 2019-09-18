@@ -53,7 +53,7 @@ std::string SickTimCommon::getNamespaceStr()
 
 SickTimCommon::SickTimCommon(AbstractParser* parser, marble::OutputDiagnosticParams output_scan_params):
     output_scan_diagnostic_(nullptr), generic_sopas_diagnostic_(nullptr), updater_(nullptr),
-    parser_(parser), output_scan_params_(output_scan_params)
+    parser_(parser)
 {
   dynamic_reconfigure::Server<sick_tim::SickTimConfig>::CallbackType f;
   f = boost::bind(&sick_tim::SickTimCommon::update_config, this, _1, _2);
@@ -72,7 +72,7 @@ SickTimCommon::SickTimCommon(AbstractParser* parser, marble::OutputDiagnosticPar
 
   updater_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"scan", nh_);
 
-  output_scan_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"scan", nh_, output_scan_params_);
+  output_scan_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"scan", nh_, output_scan_params);
   output_scan_diagnostic_->addToUpdater(updater_);
 
   generic_sopas_diagnostic_ = new marble::GenericDiagnostic("SOPAS");
