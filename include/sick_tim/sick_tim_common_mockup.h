@@ -51,7 +51,8 @@ namespace sick_tim
 class SickTimCommonMockup : public SickTimCommon
 {
 public:
-  SickTimCommonMockup(AbstractParser* parser);
+  SickTimCommonMockup(AbstractParser* parser,
+    marble::OutputDiagnosticParams output_scan_params = marble::OutputDiagnosticParams());
   virtual ~SickTimCommonMockup();
 
 protected:

@@ -3,7 +3,8 @@ project(sick_tim)
 
 find_package(catkin REQUIRED
     COMPONENTS
-      diagnostic_updater
+      mbot_parameters
+      mbot_diagnostics
       dynamic_reconfigure
       roscpp
       roslaunch
@@ -19,7 +20,7 @@ generate_dynamic_reconfigure_options(cfg/SickTim.cfg)
 
 catkin_package(
     DEPENDS Boost libusb
-    CATKIN_DEPENDS roscpp sensor_msgs diagnostic_updater dynamic_reconfigure
+    CATKIN_DEPENDS roscpp sensor_msgs mbot_diagnostics dynamic_reconfigure
     LIBRARIES sick_tim_3xx
     INCLUDE_DIRS include)
 

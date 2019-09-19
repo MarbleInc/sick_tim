@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2013, Osnabrück University
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Osnabrück University nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -44,9 +44,16 @@
 namespace sick_tim
 {
 
-SickTimCommon::SickTimCommon(AbstractParser* parser) :
-    diagnosticPub_(NULL), expectedFrequency_(15.0), parser_(parser)
-    // FIXME All Tims have 15Hz?
+std::string SickTimCommon::getNamespaceStr()
+{
+    auto ns = ros::this_node::getNamespace();
+    ns.erase(std::remove(ns.begin(), ns.end(), '/'), ns.end());
+    return ns;
+}
+
+SickTimCommon::SickTimCommon(AbstractParser* parser, marble::OutputDiagnosticParams output_scan_params):
+    output_scan_diagnostic_(nullptr), generic_sopas_diagnostic_(nullptr), updater_(nullptr),
+    parser_(parser)
 {
   dynamic_reconfigure::Server<sick_tim::SickTimConfig>::CallbackType f;
   f = boost::bind(&sick_tim::SickTimCommon::update_config, this, _1, _2);
@@ -61,13 +68,19 @@ SickTimCommon::SickTimCommon(AbstractParser* parser) :
   // scan publisher
   pub_ = nh_.advertise<sensor_msgs::LaserScan>("scan", 1000);
 
-  diagnostics_.setHardwareID("none");   // set from device after connection
-  diagnosticPub_ = new diagnostic_updater::DiagnosedPublisher<sensor_msgs::LaserScan>(pub_, diagnostics_,
-          // frequency should be target +- 10%.
-          diagnostic_updater::FrequencyStatusParam(&expectedFrequency_, &expectedFrequency_, 0.1, 10),
-          // timestamp delta can be from 0.0 to 1.3x what it ideally is.
-          diagnostic_updater::TimeStampStatusParam(-1, 1.3 * 1.0/expectedFrequency_ - config_.time_offset));
-  ROS_ASSERT(diagnosticPub_ != NULL);
+  namespace_ = getNamespaceStr();
+
+  updater_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"scan", nh_);
+
+  output_scan_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"scan", nh_, output_scan_params);
+  output_scan_diagnostic_->addToUpdater(updater_);
+
+  generic_sopas_diagnostic_ = new marble::GenericDiagnostic("SOPAS");
+  generic_sopas_diagnostic_->addToUpdater(updater_);
+
+  ROS_ASSERT(updater_!= NULL);
+  ROS_ASSERT(output_scan_diagnostic_!= NULL);
+  ROS_ASSERT(generic_sopas_diagnostic_!= NULL);
 }
 
 int SickTimCommon::stop_scanner()
@@ -96,14 +109,14 @@ bool SickTimCommon::rebootScanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error setting access mode");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error setting access mode.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error setting access mode.");
     return false;
   }
   std::string access_reply_str = replyToString(access_reply);
   if (access_reply_str != "sAN SetAccessMode 1")
   {
     ROS_ERROR_STREAM("SOPAS - Error setting access mode, unexpected response : " << access_reply_str);
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error setting access mode.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error setting access mode.");
     return false;
   }
 
@@ -115,14 +128,14 @@ bool SickTimCommon::rebootScanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error rebooting scanner");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error rebooting device.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error rebooting device.");
     return false;
   }
   std::string reboot_reply_str = replyToString(reboot_reply);
   if (reboot_reply_str != "sAN mSCreboot")
   {
     ROS_ERROR_STREAM("SOPAS - Error rebooting scanner, unexpected response : " << reboot_reply_str);
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error setting access mode.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error setting access mode.");
     return false;
   }
 
@@ -136,7 +149,12 @@ bool SickTimCommon::rebootScanner()
 
 SickTimCommon::~SickTimCommon()
 {
-  delete diagnosticPub_;
+  delete updater_;
+  updater_ = nullptr;
+  delete output_scan_diagnostic_;
+  output_scan_diagnostic_ = nullptr;
+  delete generic_sopas_diagnostic_;
+  generic_sopas_diagnostic_ = nullptr;
 
   printf("sick_tim driver exiting.\n");
 }
@@ -167,7 +185,8 @@ int SickTimCommon::init_scanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error reading variable 'DeviceIdent'.");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error reading variable 'DeviceIdent'.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error reading variable 'DeviceIdent'.");
+    return ExitError;
   }
 
   /*
@@ -179,13 +198,13 @@ int SickTimCommon::init_scanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error reading variable 'SerialNumber'.");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error reading variable 'SerialNumber'.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error reading variable 'SerialNumber'.");
+    return ExitError;
   }
 
   // set hardware ID based on DeviceIdent and SerialNumber
   std::string identStr = replyToString(identReply);
   std::string serialStr = replyToString(serialReply);
-  diagnostics_.setHardwareID(identStr + " " + serialStr);
 
   if (!isCompatibleDevice(identStr))
     return ExitFatal;
@@ -198,7 +217,8 @@ int SickTimCommon::init_scanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error reading variable 'FirmwareVersion'.");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error reading variable 'FirmwareVersion'.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error reading variable 'FirmwareVersion'.");
+    return ExitError;
   }
 
   /*
@@ -210,7 +230,8 @@ int SickTimCommon::init_scanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error reading variable 'devicestate'.");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error reading variable 'devicestate'.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error reading variable 'devicestate'.");
+    return ExitError;
   }
   std::string deviceStateReplyStr = replyToString(deviceStateReply);
 
@@ -247,9 +268,11 @@ int SickTimCommon::init_scanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error starting to stream 'LMDscandata'.");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error starting to stream 'LMDscandata'.");
+    generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error starting to stream 'LMDscandata'.");
     return ExitError;
   }
+
+  generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::OK, "SOPAS diagnostic initialized");
 
   return ExitSuccess;
 }
@@ -289,8 +312,6 @@ bool sick_tim::SickTimCommon::isCompatibleDevice(const std::string identStr) con
 
 int SickTimCommon::loopOnce()
 {
-  diagnostics_.update();
-
   unsigned char receiveBuffer[65536];
   int actual_length = 0;
   static unsigned int iteration_count = 0;
@@ -299,7 +320,7 @@ int SickTimCommon::loopOnce()
   if (result != 0)
   {
       ROS_ERROR("Read Error when getting datagram: %i.", result);
-      diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "Read Error when getting datagram.");
+      generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "Read Error when getting datagram.");
       return ExitError; // return failure to exit node
   }
   if(actual_length <= 0)
@@ -330,9 +351,12 @@ int SickTimCommon::loopOnce()
     dstart++;
     int success = parser_->parse_datagram(dstart, dlength, config_, msg);
     if (success == ExitSuccess)
-      diagnosticPub_->publish(msg);
+      pub_.publish(msg);
     buffer_pos = dend + 1;
   }
+
+  output_scan_diagnostic_->tick();
+  generic_sopas_diagnostic_->setStatus(marble::diagnostics::Status::OK, "SICK data published");
 
   return ExitSuccess; // return success to continue looping
 }

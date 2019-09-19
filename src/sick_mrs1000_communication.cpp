@@ -39,28 +39,40 @@ namespace sick_tim
 SickMrs1000Communication::SickMrs1000Communication(const std::string &hostname,
                                                    const std::string &port,
                                                    int &timelimit,
-                                                   ScanAndCloudParser* parser)
-: SickTimCommonTcp(hostname, port, timelimit, parser),
+                                                   ScanAndCloudParser* parser,
+                                                   marble::OutputDiagnosticParams
+                                                   output_scan_params)
+: SickTimCommonTcp(hostname, port, timelimit, parser, output_scan_params),
   scan_and_cloud_parser_(parser),
-  cloud_pub_(nh_.advertise<sensor_msgs::PointCloud2>("cloud", 300)),
-  diagnosed_cloud_publisher_(cloud_pub_, diagnostics_,
-    diagnostic_updater::FrequencyStatusParam(&expectedFrequency_, &expectedFrequency_, 0.1, 10),
-    diagnostic_updater::TimeStampStatusParam(-1, 1.3 * 1.0/expectedFrequency_ - config_.time_offset)
-  )
+  cloud_pub_(nh_.advertise<sensor_msgs::PointCloud2>("cloud", 300))
 {
-  expectedFrequency_ = 12.5; // by data sheet 50 Hz, 4 x 12,5 Hz
+
+  updater_mrs_1000_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"cloud", nh_);
+
+  output_cloud_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"cloud", nh_, output_scan_params);
+  output_cloud_diagnostic_->addToUpdater(updater_mrs_1000_);
+
+  generic_mrs_1000_diagnostic_ = new marble::GenericDiagnostic("datagram");
+  generic_mrs_1000_diagnostic_->addToUpdater(updater_);
+  generic_mrs_1000_diagnostic_->addToUpdater(updater_mrs_1000_);
+
+  ROS_ASSERT(updater_mrs_1000_!= NULL);
+  ROS_ASSERT(output_cloud_diagnostic_!= NULL);
+  ROS_ASSERT(generic_mrs_1000_diagnostic_!= NULL);
 }
 
 SickMrs1000Communication::~SickMrs1000Communication()
 {
-
-
+  delete updater_mrs_1000_;
+  updater_mrs_1000_ = nullptr;
+  delete output_cloud_diagnostic_;
+  output_cloud_diagnostic_ = nullptr;
+  delete generic_mrs_1000_diagnostic_;
+  generic_mrs_1000_diagnostic_ = nullptr;
 }
 
 int SickMrs1000Communication::loopOnce()
 {
-  diagnostics_.update();
-
   unsigned char receiveBuffer[65536];
   int actual_length = 0;
   static unsigned int iteration_count = 0;
@@ -69,7 +81,7 @@ int SickMrs1000Communication::loopOnce()
   if (result != 0)
   {
     ROS_ERROR("Read Error when getting datagram: %i.", result);
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "Read Error when getting datagram.");
+    generic_mrs_1000_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "Read Error when getting datagram.");
     return ExitError; // return failure to exit node
   }
   if(actual_length <= 0)
@@ -112,8 +124,10 @@ int SickMrs1000Communication::loopOnce()
       {
         ROS_DEBUG_STREAM("Publish cloud with " << cloud.height * cloud.width
           << " points in the frame \"" << cloud.header.frame_id << "\".");
-        diagnosed_cloud_publisher_.publish(cloud);
+        cloud_pub_.publish(cloud);
+        output_cloud_diagnostic_->tick();
       }
+
 
       /*
        * scan.header.frame_id == "" means the laser scan was of a layer
@@ -122,12 +136,14 @@ int SickMrs1000Communication::loopOnce()
        */
       if(scan.header.frame_id != "")
       {
-        diagnosticPub_->publish(scan);
+        pub_.publish(scan);
+        output_scan_diagnostic_->tick();
       }
-
     }
     buffer_pos = dend + 1;
   }
+
+  generic_mrs_1000_diagnostic_->setStatus(marble::diagnostics::Status::OK, "Cloud and scan published");
 
   return ExitSuccess; // return success to continue looping
 }
@@ -148,14 +164,14 @@ int SickMrs1000Communication::init_scanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error setting access mode");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error setting access mode.");
+    generic_mrs_1000_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error setting access mode.");
     return ExitError;
   }
   std::string access_reply_str = replyToString(access_reply);
   if (access_reply_str != "sAN SetAccessMode 1")
   {
     ROS_ERROR_STREAM("SOPAS - Error setting access mode, unexpected response : " << access_reply_str);
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error setting access mode.");
+    generic_mrs_1000_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error setting access mode.");
     return ExitError;
   }
 
@@ -168,7 +184,7 @@ int SickMrs1000Communication::init_scanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - SetActiveApplications failed 'sWN SetActiveApplications'.");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - 'sWN SetActiveApplications 1 RANG 1'.");
+    generic_mrs_1000_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - 'sWN SetActiveApplications 1 RANG 1'.");
     return ExitError;
   }
   std::string activeApplicationReplyStr = replyToString(activeApplicationReply);
@@ -182,9 +198,11 @@ int SickMrs1000Communication::init_scanner()
   if (result != 0)
   {
     ROS_ERROR("SOPAS - Error starting to stream 'LMDscandata'.");
-    diagnostics_.broadcast(diagnostic_msgs::DiagnosticStatus::ERROR, "SOPAS - Error starting to stream 'LMDscandata'.");
+    generic_mrs_1000_diagnostic_->setStatus(marble::diagnostics::Status::ERROR, "SOPAS - Error starting to stream 'LMDscandata'.");
     return ExitError;
   }
+
+  generic_mrs_1000_diagnostic_->setStatus(marble::diagnostics::Status::OK, "MRS Scanner initialized.");
 
   return ExitSuccess;
 

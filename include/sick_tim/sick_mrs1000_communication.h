@@ -51,15 +51,18 @@ class SickMrs1000Communication : public SickTimCommonTcp
   SickMrs1000Communication(const std::string &hostname,
                            const std::string &port,
                            int &timelimit,
-                           ScanAndCloudParser *parser);
+                           ScanAndCloudParser *parser,
+                           marble::OutputDiagnosticParams output_scan_params =
+                           marble::OutputDiagnosticParams());
   virtual ~SickMrs1000Communication();
   virtual int loopOnce();
 
  protected:
   ros::NodeHandle nh_;
   ros::Publisher cloud_pub_;
-  diagnostic_updater::DiagnosedPublisher<sensor_msgs::PointCloud2>
-      diagnosed_cloud_publisher_;
+  marble::DiagnosticUpdater* updater_mrs_1000_;
+  marble::OutputDiagnostic* output_cloud_diagnostic_;
+  marble::GenericDiagnostic* generic_mrs_1000_diagnostic_;
   virtual int init_scanner();
   ScanAndCloudParser *scan_and_cloud_parser_;
 };
@@ -68,4 +71,3 @@ class SickMrs1000Communication : public SickTimCommonTcp
 
 /* namespace sick_tim */
 #endif /* SICK_MRS1000_COMMUNICATION_H */
-

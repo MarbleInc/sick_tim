@@ -38,7 +38,8 @@
 namespace sick_tim
 {
 
-SickTimCommonMockup::SickTimCommonMockup(AbstractParser* parser) : SickTimCommon(parser)
+SickTimCommonMockup::SickTimCommonMockup(AbstractParser* parser,
+  marble::OutputDiagnosticParams output_scan_params) : SickTimCommon(parser,output_scan_params)
 {
   sub_ = nh_.subscribe("datagram", 1, &SickTimCommonMockup::datagramCB, this);
 }

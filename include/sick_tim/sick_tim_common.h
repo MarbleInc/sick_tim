@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2013, Osnabrück University
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Osnabrück University nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -49,10 +49,13 @@
 #include <sensor_msgs/LaserScan.h>
 #include <std_msgs/String.h>
 
-#include <diagnostic_updater/diagnostic_updater.h>
-#include <diagnostic_updater/publisher.h>
+#include "diagnostics/diagnostic_state.h"
+#include <mbot_diagnostics/diagnostic_updater.h>
+#include <mbot_diagnostics/output_diagnostic.h>
+#include <mbot_diagnostics/generic_diagnostic.h>
 
 #include <dynamic_reconfigure/server.h>
+
 #include <sick_tim/SickTimConfig.h>
 
 #include "abstract_parser.h"
@@ -63,14 +66,12 @@ namespace sick_tim
 class SickTimCommon
 {
 public:
-  SickTimCommon(AbstractParser* parser);
+  SickTimCommon(AbstractParser* parser, marble::OutputDiagnosticParams output_scan_params = marble::OutputDiagnosticParams());
   virtual ~SickTimCommon();
   virtual int init();
   virtual int loopOnce();
   void check_angle_range(SickTimConfig &conf);
   void update_config(sick_tim::SickTimConfig &new_config, uint32_t level = 0);
-
-  double get_expected_frequency() const { return expectedFrequency_; }
 
   /// Send a SOPAS command to the scanner that should cause a soft reset
   /**
@@ -109,22 +110,23 @@ protected:
   bool isCompatibleDevice(const std::string identStr) const;
 
 protected:
-  diagnostic_updater::Updater diagnostics_;
+
+  marble::DiagnosticUpdater* updater_;
+  marble::OutputDiagnostic* output_scan_diagnostic_;
+  marble::GenericDiagnostic* generic_sopas_diagnostic_;
 
   // Dynamic Reconfigure
   SickTimConfig config_;
   bool publish_datagram_;
   ros::Publisher datagram_pub_;
+  ros::Publisher pub_;
 
-  // Diagnostics
-  diagnostic_updater::DiagnosedPublisher<sensor_msgs::LaserScan>* diagnosticPub_;
-  double expectedFrequency_;
+  std::string namespace_;
 
 private:
   // ROS
   ros::NodeHandle nh_;
-  ros::Publisher pub_;
-
+  static std::string getNamespaceStr();
 
   dynamic_reconfigure::Server<sick_tim::SickTimConfig> dynamic_reconfigure_server_;
 
