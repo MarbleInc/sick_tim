@@ -121,8 +121,6 @@ protected:
   ros::Publisher datagram_pub_;
   ros::Publisher pub_;
 
-  std::string namespace_;
-
 private:
   // ROS
   ros::NodeHandle nh_;

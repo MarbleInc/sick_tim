@@ -44,13 +44,6 @@
 namespace sick_tim
 {
 
-std::string SickTimCommon::getNamespaceStr()
-{
-    auto ns = ros::this_node::getNamespace();
-    ns.erase(std::remove(ns.begin(), ns.end(), '/'), ns.end());
-    return ns;
-}
-
 SickTimCommon::SickTimCommon(AbstractParser* parser, marble::OutputDiagnosticParams output_scan_params):
     output_scan_diagnostic_(nullptr), generic_sopas_diagnostic_(nullptr), updater_(nullptr),
     parser_(parser)
@@ -68,11 +61,9 @@ SickTimCommon::SickTimCommon(AbstractParser* parser, marble::OutputDiagnosticPar
   // scan publisher
   pub_ = nh_.advertise<sensor_msgs::LaserScan>("scan", 1000);
 
-  namespace_ = getNamespaceStr();
+  updater_ = new marble::DiagnosticUpdater(nh_.resolveName("scan"), "Sick Scan", nh_);
 
-  updater_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"scan", nh_);
-
-  output_scan_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"scan", nh_, output_scan_params);
+  output_scan_diagnostic_ = new marble::OutputDiagnostic(nh_.resolveName("scan"), nh_, output_scan_params);
   output_scan_diagnostic_->addToUpdater(updater_);
 
   generic_sopas_diagnostic_ = new marble::GenericDiagnostic("SOPAS");

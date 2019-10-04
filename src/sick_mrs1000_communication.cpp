@@ -47,9 +47,9 @@ SickMrs1000Communication::SickMrs1000Communication(const std::string &hostname,
   cloud_pub_(nh_.advertise<sensor_msgs::PointCloud2>("cloud", 300))
 {
 
-  updater_mrs_1000_ = new marble::DiagnosticUpdater("/"+namespace_+"/"+"cloud", nh_);
+  updater_mrs_1000_ = new marble::DiagnosticUpdater(nh_.resolveName("cloud"), "Sick Points", nh_);
 
-  output_cloud_diagnostic_ = new marble::OutputDiagnostic("/"+namespace_+"/"+"cloud", nh_, output_scan_params);
+  output_cloud_diagnostic_ = new marble::OutputDiagnostic(nh_.resolveName("cloud"), nh_, output_scan_params);
   output_cloud_diagnostic_->addToUpdater(updater_mrs_1000_);
 
   generic_mrs_1000_diagnostic_ = new marble::GenericDiagnostic("datagram");
