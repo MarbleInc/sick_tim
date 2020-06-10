@@ -37,7 +37,7 @@
 
 #include "abstract_parser.h"
 #include <parameters/parameter_declaration.h>
-#include <mbot_diagnostics/output_diagnostic.h>
+#include <diagnostics_ros/output_diagnostic.h>
 
 namespace sick_tim
 {

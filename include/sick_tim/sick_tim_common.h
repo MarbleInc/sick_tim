@@ -50,9 +50,9 @@
 #include <std_msgs/String.h>
 
 #include "diagnostics/diagnostic_state.h"
-#include <mbot_diagnostics/diagnostic_updater.h>
-#include <mbot_diagnostics/output_diagnostic.h>
-#include <mbot_diagnostics/generic_diagnostic.h>
+#include <diagnostics_ros/diagnostic_updater.h>
+#include <diagnostics_ros/output_diagnostic.h>
+#include <diagnostics_ros/generic_diagnostic.h>
 
 #include <dynamic_reconfigure/server.h>
 
